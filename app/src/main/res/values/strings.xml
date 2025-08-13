@@ -2,8 +2,8 @@
     <string name="app_name">test</string>
     <string name="current_time_label">現在の時刻</string>
     <string-array name="voice_options">
-        <item>ずんだもん</item>
-        <item>四国めたん</item>
+        <item>VOICEVOX: ずんだもん</item>
+        <item>VOICEVOX: 四国めたん</item>
     </string-array>
 </resources>
 

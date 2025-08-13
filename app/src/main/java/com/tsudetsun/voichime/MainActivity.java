@@ -32,15 +32,15 @@ public class MainActivity extends AppCompatActivity {
 
         // 表示名と識別子の対応表
         Map<String, String> voiceMap = new HashMap<>();
-        voiceMap.put("ずんだもん", "zundamon");
-        voiceMap.put("四国めたん", "shikokumetan");
+        voiceMap.put("VOICEVOX: ずんだもん", "zundamon");
+        voiceMap.put("VOICEVOX: 四国めたん", "shikokumetan");
 
         // SharedPreferencesの準備
         SharedPreferences prefs = getSharedPreferences("settings", MODE_PRIVATE);
         String currentVoiceId = prefs.getString("voiceType", "zundamon");
 
         // 識別子から表示名を逆引き
-        String currentDisplayName = "ずんだもん";
+        String currentDisplayName = "VOICEVOX: ずんだもん";
         for (Map.Entry<String, String> entry : voiceMap.entrySet()) {
             if (entry.getValue().equals(currentVoiceId)) {
                 currentDisplayName = entry.getKey();
