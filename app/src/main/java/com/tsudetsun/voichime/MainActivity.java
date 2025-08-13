@@ -32,15 +32,16 @@ public class MainActivity extends AppCompatActivity {
 
         // 表示名と識別子の対応表
         Map<String, String> voiceMap = new HashMap<>();
+        voiceMap.put("COEIROINK: つくよみちゃん", "tsukuyomichan");
         voiceMap.put("VOICEVOX: ずんだもん", "zundamon");
         voiceMap.put("VOICEVOX: 四国めたん", "shikokumetan");
 
         // SharedPreferencesの準備
         SharedPreferences prefs = getSharedPreferences("settings", MODE_PRIVATE);
-        String currentVoiceId = prefs.getString("voiceType", "zundamon");
+        String currentVoiceId = prefs.getString("voiceType", "tsukuyomichan");
 
         // 識別子から表示名を逆引き
-        String currentDisplayName = "VOICEVOX: ずんだもん";
+        String currentDisplayName = "COEIROINK: つくよみちゃん";
         for (Map.Entry<String, String> entry : voiceMap.entrySet()) {
             if (entry.getValue().equals(currentVoiceId)) {
                 currentDisplayName = entry.getKey();
@@ -84,7 +85,7 @@ public class MainActivity extends AppCompatActivity {
                 timeText.setText(message);
 
                 if ((minute == 0 || minute == 30) && second == 0 && !hasPlayed) {
-                    String selectedVoice = prefs.getString("voiceType", "zundamon");
+                    String selectedVoice = prefs.getString("voiceType", "tsukuyomichan");
 
                     int introResId = getResources().getIdentifier(selectedVoice + "_intro", "raw", getPackageName());
                     int hourResId = getResources().getIdentifier(selectedVoice + "_hour" + hour, "raw", getPackageName());
