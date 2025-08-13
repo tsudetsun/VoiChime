@@ -9,13 +9,21 @@
         android:id="@+id/timeText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/current_time_label"
-        android:textSize="48sp" />
+        android:layout_gravity="center"
+        android:padding="16dp"
+        android:text="現在の時刻"
+        android:textSize="60sp" />
 
     <Spinner
         android:id="@+id/voiceSelector"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:entries="@array/voice_options" />
+        android:layout_gravity="center_horizontal"
+        android:layout_margin="8dp"
+        android:minWidth="48dp"
+        android:minHeight="48dp"
+        android:padding="12dp"
+        android:spinnerMode="dropdown" />
+
 
 </LinearLayout>

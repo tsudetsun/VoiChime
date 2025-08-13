@@ -33,6 +33,7 @@ android {
 
 dependencies {
 
+    implementation("androidx.core:core:1.12.0")
     implementation(libs.appcompat)
     implementation(libs.material)
     testImplementation(libs.junit)
