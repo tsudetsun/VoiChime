@@ -9,9 +9,9 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Spinner;
 import android.widget.TextView;
-
+import java.util.Map;
+import java.util.HashMap;
 import androidx.appcompat.app.AppCompatActivity;
-
 import java.util.Calendar;
 
 public class MainActivity extends AppCompatActivity {
@@ -19,7 +19,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView timeText;
     private Handler handler = new Handler();
     private Runnable timeUpdater;
-    private boolean hasPlayed = false; // 同じ時刻で何度も鳴らさないようにする
+    private boolean hasPlayed = false;
     private Spinner voiceSelector;
 
     @Override
@@ -30,34 +30,48 @@ public class MainActivity extends AppCompatActivity {
         timeText = findViewById(R.id.timeText);
         voiceSelector = findViewById(R.id.voiceSelector);
 
+        // 表示名と識別子の対応表
+        Map<String, String> voiceMap = new HashMap<>();
+        voiceMap.put("ずんだもん", "zundamon");
+        voiceMap.put("四国めたん", "shikokumetan");
+
         // SharedPreferencesの準備
         SharedPreferences prefs = getSharedPreferences("settings", MODE_PRIVATE);
-        String currentVoice = prefs.getString("voiceType", "zundamon");
+        String currentVoiceId = prefs.getString("voiceType", "zundamon");
 
+        // 識別子から表示名を逆引き
+        String currentDisplayName = "ずんだもん";
+        for (Map.Entry<String, String> entry : voiceMap.entrySet()) {
+            if (entry.getValue().equals(currentVoiceId)) {
+                currentDisplayName = entry.getKey();
+                break;
+            }
+        }
 
-        // Spinnerに選択肢を設定
+        // Spinnerに表示名を設定
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
                 R.array.voice_options, android.R.layout.simple_spinner_item);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         voiceSelector.setAdapter(adapter);
 
         // 現在の選択を反映
-        int position = adapter.getPosition(currentVoice);
-        voiceSelector.setSelection(position);
+        int spinnerPosition = adapter.getPosition(currentDisplayName);
+        voiceSelector.setSelection(spinnerPosition);
 
-        // 選択されたら保存
+        // 選択されたら識別子を保存
         voiceSelector.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                String selectedVoice = parent.getItemAtPosition(position).toString();
-                prefs.edit().putString("voiceType", selectedVoice).apply();
+                String displayName = parent.getItemAtPosition(position).toString();
+                String voiceId = voiceMap.get(displayName);
+                prefs.edit().putString("voiceType", voiceId).apply();
             }
 
             @Override
             public void onNothingSelected(AdapterView<?> parent) {}
         });
 
-        // 時刻更新処理を定義
+        // 時刻更新処理
         timeUpdater = new Runnable() {
             @Override
             public void run() {
@@ -69,7 +83,6 @@ public class MainActivity extends AppCompatActivity {
                 String message = hour + " : " + minute + " : " + second;
                 timeText.setText(message);
 
-                // 00分または30分のみ対象
                 if ((minute == 0 || minute == 30) && second == 0 && !hasPlayed) {
                     String selectedVoice = prefs.getString("voiceType", "zundamon");
 
@@ -106,7 +119,6 @@ public class MainActivity extends AppCompatActivity {
                     hasPlayed = true;
                 }
 
-                // 分が変わったらリセット
                 if (minute != 0 && minute != 30) {
                     hasPlayed = false;
                 }
@@ -121,7 +133,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        // アプリ終了時に更新を止める
         handler.removeCallbacks(timeUpdater);
     }
 }
