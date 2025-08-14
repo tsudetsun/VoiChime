@@ -25,5 +25,18 @@
         android:padding="12dp"
         android:spinnerMode="dropdown" />
 
+    <Spinner
+        android:id="@+id/intervalSelector"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:entries="@array/interval_options" />
+
+    <Switch
+        android:id="@+id/signalSwitch"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:checked="true"
+        android:text="時報を有効にする" />
 
 </LinearLayout>

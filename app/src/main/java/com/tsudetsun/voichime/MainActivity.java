@@ -13,10 +13,12 @@ import java.util.Map;
 import java.util.Calendar;
 import android.widget.TextView;
 import android.os.Handler;
+import android.widget.Switch;
 
 public class MainActivity extends AppCompatActivity {
 
     private Spinner voiceSelector;
+    private Switch signalSwitch;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -93,6 +95,43 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
+        signalSwitch = findViewById(R.id.signalSwitch);
+        boolean isSignalEnabled = prefs.getBoolean("signalEnabled", true);
+        signalSwitch.setChecked(isSignalEnabled);
+
+        signalSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            prefs.edit().putBoolean("signalEnabled", isChecked).apply();
+
+            if (isChecked) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    startForegroundService(serviceIntent);
+                } else {
+                    startService(serviceIntent);
+                }
+            } else {
+                stopService(serviceIntent);
+            }
+        });
+
+        // 起動時にサービスを開始するかどうか
+        if (isSignalEnabled) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(serviceIntent);
+            } else {
+                startService(serviceIntent);
+            }
+        }
+
         timeHandler.post(updateTime);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        SharedPreferences prefs = getSharedPreferences("settings", MODE_PRIVATE);
+        boolean isSignalEnabled = prefs.getBoolean("signalEnabled", true);
+
+        signalSwitch.setChecked(isSignalEnabled);
     }
 }

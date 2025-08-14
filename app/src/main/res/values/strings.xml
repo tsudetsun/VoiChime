@@ -6,5 +6,11 @@
         <item>VOICEVOX: ずんだもん</item>
         <item>VOICEVOX: 四国めたん</item>
     </string-array>
+    <string-array name="interval_options">
+        <item>10分</item>
+        <item>15分</item>
+        <item>30分</item>
+        <item>1時間</item>
+    </string-array>
 </resources>
 

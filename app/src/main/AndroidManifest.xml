@@ -19,6 +19,8 @@
             </intent-filter>
         </activity>
 
+        <receiver android:name=".StopServiceReceiver" />
+
         <service
             android:name=".TimeSignalService"
             android:exported="false"
