@@ -2,11 +2,15 @@ package com.tsudetsun.voichime;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
+import android.text.Html;
+import android.text.method.LinkMovementMethod;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.Spinner;
 import androidx.appcompat.app.AppCompatActivity;
 import java.util.HashMap;
@@ -158,8 +162,19 @@ public class MainActivity extends AppCompatActivity {
             public void onNothingSelected(AdapterView<?> parent) {}
         });
 
+        Button btnCredits = findViewById(R.id.btnCredits);
+        btnCredits.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, CreditActivity.class);
+                startActivity(intent);
+            }
+        });
+
         timeHandler.post(updateTime);
     }
+
+
 
     @Override
     protected void onResume() {

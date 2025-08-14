@@ -25,5 +25,7 @@
             android:name=".TimeSignalService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
+
+        <activity android:name=".CreditActivity" />
     </application>
 </manifest>
