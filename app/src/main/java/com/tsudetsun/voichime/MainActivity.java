@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Spinner;
@@ -121,6 +122,41 @@ public class MainActivity extends AppCompatActivity {
                 startService(serviceIntent);
             }
         }
+
+        Spinner intervalSelector = findViewById(R.id.intervalSelector);
+        int currentInterval = prefs.getInt("intervalMinutes", 30); // デフォルト30分
+
+        Map<String, Integer> intervalMap = new HashMap<>();
+        intervalMap.put("10分", 10);
+        intervalMap.put("15分", 15);
+        intervalMap.put("30分", 30);
+        intervalMap.put("1時間", 60);
+
+        ArrayAdapter<CharSequence> intervalAdapter = ArrayAdapter.createFromResource(this,
+                R.array.interval_options, android.R.layout.simple_spinner_item);
+        intervalAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        intervalSelector.setAdapter(intervalAdapter);
+
+        // 現在の選択を反映
+        for (Map.Entry<String, Integer> entry : intervalMap.entrySet()) {
+            if (entry.getValue() == currentInterval) {
+                int pos = intervalAdapter.getPosition(entry.getKey());
+                intervalSelector.setSelection(pos);
+                break;
+            }
+        }
+
+        intervalSelector.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String label = parent.getItemAtPosition(position).toString();
+                int interval = intervalMap.get(label);
+                prefs.edit().putInt("intervalMinutes", interval).apply();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
+        });
 
         timeHandler.post(updateTime);
     }

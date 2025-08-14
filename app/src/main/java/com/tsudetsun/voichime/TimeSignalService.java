@@ -59,7 +59,9 @@ public class TimeSignalService extends Service {
                     int minute = calendar.get(Calendar.MINUTE);
                     int second = calendar.get(Calendar.SECOND);
 
-                    if ((minute == 0 || minute == 30) && second == 0 && !hasPlayed) {
+                    int intervalMinutes = prefs.getInt("intervalMinutes", 30); // デフォルト30分
+
+                    if ((minute % intervalMinutes == 0) && second == 0 && !hasPlayed) {
                         String selectedVoice = prefs.getString("voiceType", "tsukuyomichan");
 
                         int introResId = getResources().getIdentifier(selectedVoice + "_intro", "raw", getPackageName());

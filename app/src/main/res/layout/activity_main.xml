@@ -27,9 +27,10 @@
 
     <Spinner
         android:id="@+id/intervalSelector"
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:entries="@array/interval_options" />
+        android:entries="@array/interval_options"
+        android:minHeight="48dp" />
 
     <Switch
         android:id="@+id/signalSwitch"
@@ -37,6 +38,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:checked="true"
+        android:minHeight="48dp"
         android:text="時報を有効にする" />
 
 </LinearLayout>
