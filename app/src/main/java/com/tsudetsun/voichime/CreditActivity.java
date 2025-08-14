@@ -18,7 +18,7 @@ public class CreditActivity extends AppCompatActivity {
         creditsText.setText(Html.fromHtml(
                 "【使用音声】<br>" +
                         "・つくよみちゃん(COEIROINK) <a href='https://tyc.rei-yumesaki.net/'>つくよみちゃん公式サイト</a><br>" +
-                        "・ずんだもん(VOICEVOX) <a href='https://zunko.jp/'ずんずんPJ公式サイト</a><br>" +
+                        "・ずんだもん(VOICEVOX) <a href='https://zunko.jp/'>ずんずんPJ公式サイト</a><br>" +
                         "・四国めたん(VOICEVOX) <a href='https://zunko.jp/'>ずんずんPJ公式サイト</a><br><br>" +
                         "【使用ソフト】<br>" +
                         "・COEIROINK <a href='https://coeiroink.com/'>COEIROINK公式サイト</a><br>" +
