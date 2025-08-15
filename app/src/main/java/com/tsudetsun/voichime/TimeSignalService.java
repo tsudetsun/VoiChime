@@ -137,35 +137,47 @@ public class TimeSignalService extends Service {
         int minuteResId = getResources().getIdentifier(selectedVoice + "_minute" + minute, "raw", getPackageName());
         int outroResId = getResources().getIdentifier(selectedVoice + "_outro", "raw", getPackageName());
 
-        if (introResId != 0) {
-            MediaPlayer introPlayer = MediaPlayer.create(TimeSignalService.this, introResId);
-            MediaPlayer hourPlayer = MediaPlayer.create(TimeSignalService.this, hourResId);
-            MediaPlayer minutePlayer = MediaPlayer.create(TimeSignalService.this, minuteResId);
-            MediaPlayer outroPlayer = MediaPlayer.create(TimeSignalService.this, outroResId);
-
-
-            introPlayer.setOnCompletionListener(mp -> {
-                hourPlayer.start();
-                introPlayer.release();
-            });
-
-            hourPlayer.setOnCompletionListener(mp -> {
-                minutePlayer.start();
-                hourPlayer.release();
-            });
-
-            minutePlayer.setOnCompletionListener(mp -> {
-                outroPlayer.start();
-                minutePlayer.release();
-            });
-
-            outroPlayer.setOnCompletionListener(mp -> {
-                outroPlayer.release();
-            });
-
-            introPlayer.start();
-            hasPlayed = true;
+        if (introResId == 0 || hourResId == 0 || minuteResId == 0 || outroResId == 0) {
+            Log.w("TimeSignalService", "音声ファイルが見つかりません: " +
+                    "intro=" + introResId + ", hour=" + hourResId + ", minute=" + minuteResId + ", outro=" + outroResId);
+            return;
         }
-    }
 
+        MediaPlayer introPlayer = MediaPlayer.create(this, introResId);
+        MediaPlayer hourPlayer = MediaPlayer.create(this, hourResId);
+        MediaPlayer minutePlayer = MediaPlayer.create(this, minuteResId);
+        MediaPlayer outroPlayer = MediaPlayer.create(this, outroResId);
+
+        if (introPlayer == null || hourPlayer == null || minutePlayer == null || outroPlayer == null) {
+            Log.e("TimeSignalService", "MediaPlayer の生成に失敗しました");
+            return;
+        }
+
+        introPlayer.setOnCompletionListener(mp -> {
+            hourPlayer.start();
+            introPlayer.release();
+        });
+
+        hourPlayer.setOnCompletionListener(mp -> {
+            minutePlayer.start();
+            hourPlayer.release();
+        });
+
+        minutePlayer.setOnCompletionListener(mp -> {
+            outroPlayer.start();
+            minutePlayer.release();
+        });
+
+        outroPlayer.setOnCompletionListener(mp -> {
+            outroPlayer.release();
+        });
+
+        try {
+            introPlayer.start();
+        } catch (Exception e) {
+            Log.e("TimeSignalService", "introPlayer の再生中に例外", e);
+        }
+
+        hasPlayed = true;
+    }
 }
