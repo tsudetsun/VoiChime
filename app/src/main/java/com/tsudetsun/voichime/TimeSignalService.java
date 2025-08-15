@@ -19,6 +19,7 @@ public class TimeSignalService extends Service {
     private Handler handler = new Handler();
     private Runnable timeUpdater;
     private boolean hasPlayed = false;
+    private boolean hasPlayedBeep = false;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -61,7 +62,7 @@ public class TimeSignalService extends Service {
 
                     int intervalMinutes = prefs.getInt("intervalMinutes", 30); // デフォルト30分
 
-                    if ((minute % intervalMinutes == 0) && second == 0 && !hasPlayed) {
+                    if ((minute % intervalMinutes == 0) && second == 1 && !hasPlayed) {
                         String selectedVoice = prefs.getString("voiceType", "tsukuyomichan");
 
                         int introResId = getResources().getIdentifier(selectedVoice + "_intro", "raw", getPackageName());
@@ -104,6 +105,16 @@ public class TimeSignalService extends Service {
                         hasPlayed = false;
                     }
 
+                    if (((minute + 1) % intervalMinutes == 0) && second == 56 && !hasPlayedBeep) {
+                        playBeepChime();
+                        hasPlayedBeep = true;
+                    }
+
+                    if (second == 0) {
+                        hasPlayedBeep = false;
+                    }
+
+
                     handler.postDelayed(this, 1000);
                 }
             };
@@ -139,4 +150,13 @@ public class TimeSignalService extends Service {
             manager.createNotificationChannel(channel);
         }
     }
+
+    private void playBeepChime() {
+        MediaPlayer beepPlayer = MediaPlayer.create(this, R.raw.time_signal_beep);
+        beepPlayer.setOnCompletionListener(mp -> {
+            mp.release();
+        });
+        beepPlayer.start();
+    }
+
 }
