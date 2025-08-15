@@ -27,5 +27,6 @@
             android:foregroundServiceType="mediaPlayback" />
 
         <activity android:name=".CreditActivity" />
+        <activity android:name=".SettingsActivity" />
     </application>
 </manifest>

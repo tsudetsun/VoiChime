@@ -4,8 +4,8 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.text.Html;
 import android.text.method.LinkMovementMethod;
+import android.widget.Button;
 import android.widget.TextView;
-
 import androidx.appcompat.app.AppCompatActivity;
 
 public class CreditActivity extends AppCompatActivity {
@@ -32,6 +32,11 @@ public class CreditActivity extends AppCompatActivity {
                 Html.FROM_HTML_MODE_LEGACY
         ));
         creditsText.setMovementMethod(LinkMovementMethod.getInstance());
-        creditsText.setLinkTextColor(Color.BLUE);
+        creditsText.setLinkTextColor(Color.parseColor("#1E88E5")); // 明るい青
+
+
+
+        Button btnBack = findViewById(R.id.btnBackCredit);
+        btnBack.setOnClickListener(v -> finish());
     }
 }

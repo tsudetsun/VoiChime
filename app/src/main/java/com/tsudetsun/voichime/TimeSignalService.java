@@ -60,52 +60,25 @@ public class TimeSignalService extends Service {
                     int minute = calendar.get(Calendar.MINUTE);
                     int second = calendar.get(Calendar.SECOND);
 
+                    boolean isBeepEnabled = prefs.getBoolean("beepEnabled", true);
+
                     int intervalMinutes = prefs.getInt("intervalMinutes", 30); // デフォルト30分
 
-                    if ((minute % intervalMinutes == 0) && second == 1 && !hasPlayed) {
-                        String selectedVoice = prefs.getString("voiceType", "tsukuyomichan");
+                    String selectedVoice = prefs.getString("voiceType", "tsukuyomichan");
 
-                        int introResId = getResources().getIdentifier(selectedVoice + "_intro", "raw", getPackageName());
-                        int hourResId = getResources().getIdentifier(selectedVoice + "_hour" + hour, "raw", getPackageName());
-                        int minuteResId = getResources().getIdentifier(selectedVoice + "_minute" + minute, "raw", getPackageName());
-                        int outroResId = getResources().getIdentifier(selectedVoice + "_outro", "raw", getPackageName());
+                    if (isBeepEnabled && (minute % intervalMinutes == 0) && second == 1 && !hasPlayed) {
+                        playChime(selectedVoice, hour, minute);
+                    }
 
-                        if (introResId != 0) {
-                            MediaPlayer introPlayer = MediaPlayer.create(TimeSignalService.this, introResId);
-                            MediaPlayer hourPlayer = MediaPlayer.create(TimeSignalService.this, hourResId);
-                            MediaPlayer minutePlayer = MediaPlayer.create(TimeSignalService.this, minuteResId);
-                            MediaPlayer outroPlayer = MediaPlayer.create(TimeSignalService.this, outroResId);
-
-
-                            introPlayer.setOnCompletionListener(mp -> {
-                                hourPlayer.start();
-                                introPlayer.release();
-                            });
-
-                            hourPlayer.setOnCompletionListener(mp -> {
-                                minutePlayer.start();
-                                hourPlayer.release();
-                            });
-
-                            minutePlayer.setOnCompletionListener(mp -> {
-                                outroPlayer.start();
-                                minutePlayer.release();
-                            });
-
-                            outroPlayer.setOnCompletionListener(mp -> {
-                                outroPlayer.release();
-                            });
-
-                            introPlayer.start();
-                            hasPlayed = true;
-                        }
+                    if (!isBeepEnabled && (minute % intervalMinutes == 0) && second == 0 && !hasPlayed) {
+                        playChime(selectedVoice, hour, minute);
                     }
 
                     if (minute != 0 && minute != 30) {
                         hasPlayed = false;
                     }
 
-                    if (((minute + 1) % intervalMinutes == 0) && second == 56 && !hasPlayedBeep) {
+                    if (isBeepEnabled && ((minute + 1) % intervalMinutes == 0) && second == 56 && !hasPlayedBeep) {
                         playBeepChime();
                         hasPlayedBeep = true;
                     }
@@ -113,7 +86,6 @@ public class TimeSignalService extends Service {
                     if (second == 0) {
                         hasPlayedBeep = false;
                     }
-
 
                     handler.postDelayed(this, 1000);
                 }
@@ -157,6 +129,43 @@ public class TimeSignalService extends Service {
             mp.release();
         });
         beepPlayer.start();
+    }
+
+    public void playChime(String selectedVoice, int hour, int minute) {
+        int introResId = getResources().getIdentifier(selectedVoice + "_intro", "raw", getPackageName());
+        int hourResId = getResources().getIdentifier(selectedVoice + "_hour" + hour, "raw", getPackageName());
+        int minuteResId = getResources().getIdentifier(selectedVoice + "_minute" + minute, "raw", getPackageName());
+        int outroResId = getResources().getIdentifier(selectedVoice + "_outro", "raw", getPackageName());
+
+        if (introResId != 0) {
+            MediaPlayer introPlayer = MediaPlayer.create(TimeSignalService.this, introResId);
+            MediaPlayer hourPlayer = MediaPlayer.create(TimeSignalService.this, hourResId);
+            MediaPlayer minutePlayer = MediaPlayer.create(TimeSignalService.this, minuteResId);
+            MediaPlayer outroPlayer = MediaPlayer.create(TimeSignalService.this, outroResId);
+
+
+            introPlayer.setOnCompletionListener(mp -> {
+                hourPlayer.start();
+                introPlayer.release();
+            });
+
+            hourPlayer.setOnCompletionListener(mp -> {
+                minutePlayer.start();
+                hourPlayer.release();
+            });
+
+            minutePlayer.setOnCompletionListener(mp -> {
+                outroPlayer.start();
+                minutePlayer.release();
+            });
+
+            outroPlayer.setOnCompletionListener(mp -> {
+                outroPlayer.release();
+            });
+
+            introPlayer.start();
+            hasPlayed = true;
+        }
     }
 
 }
