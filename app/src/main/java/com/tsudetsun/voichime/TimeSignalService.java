@@ -5,8 +5,10 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Handler;
@@ -20,6 +22,9 @@ public class TimeSignalService extends Service {
     private Runnable timeUpdater;
     private boolean hasPlayed = false;
     private boolean hasPlayedBeep = false;
+    private static final String TAG = "ChimeService";
+    private final AudioManager.OnAudioFocusChangeListener focusChangeListener = focusChange -> {};
+
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -143,6 +148,19 @@ public class TimeSignalService extends Service {
             return;
         }
 
+        AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+
+        int result = audioManager.requestAudioFocus(
+                focusChangeListener,
+                AudioManager.STREAM_MUSIC,
+                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
+        );
+
+        if (result != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+            Log.w(TAG, "Audio focus not granted. Skipping chime.");
+            return;
+        }
+
         MediaPlayer introPlayer = MediaPlayer.create(this, introResId);
         MediaPlayer hourPlayer = MediaPlayer.create(this, hourResId);
         MediaPlayer minutePlayer = MediaPlayer.create(this, minuteResId);
@@ -177,6 +195,10 @@ public class TimeSignalService extends Service {
         } catch (Exception e) {
             Log.e("TimeSignalService", "introPlayer の再生中に例外", e);
         }
+        outroPlayer.setOnCompletionListener(mp -> {
+            mp.release();
+            audioManager.abandonAudioFocus(focusChangeListener); // ← ここで解放
+        });
 
         hasPlayed = true;
     }
