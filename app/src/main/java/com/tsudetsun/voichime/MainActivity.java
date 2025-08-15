@@ -20,16 +20,24 @@ import java.util.Calendar;
 import android.widget.TextView;
 import android.os.Handler;
 import android.widget.Switch;
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 public class MainActivity extends AppCompatActivity {
 
     private Spinner voiceSelector;
     private Switch signalSwitch;
+    private static final int REQUEST_NOTIFICATION_PERMISSION = 1001;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        requestNotificationPermissionIfNeeded();
 
         voiceSelector = findViewById(R.id.voiceSelector);
 
@@ -180,5 +188,31 @@ public class MainActivity extends AppCompatActivity {
         boolean isSignalEnabled = prefs.getBoolean("signalEnabled", true);
 
         signalSwitch.setChecked(isSignalEnabled);
+    }
+
+    private void requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                        REQUEST_NOTIFICATION_PERMISSION);
+            }
+        }
+    }
+
+    // オプション：ユーザーの応答を処理する
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           String[] permissions,
+                                           int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_NOTIFICATION_PERMISSION) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // 許可された場合の処理
+            } else {
+                // 拒否された場合の処理（例：トースト表示など）
+            }
+        }
     }
 }
