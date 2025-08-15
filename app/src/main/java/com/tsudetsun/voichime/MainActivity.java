@@ -2,18 +2,22 @@ package com.tsudetsun.voichime;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
-import android.text.Html;
-import android.text.method.LinkMovementMethod;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.LinearLayout;
 import android.widget.Spinner;
 import androidx.appcompat.app.AppCompatActivity;
+
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Calendar;
@@ -22,9 +26,16 @@ import android.os.Handler;
 import android.widget.Switch;
 import android.Manifest;
 import android.content.pm.PackageManager;
-import android.os.Build;
+import android.widget.Toast;
+
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.File;
+import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -41,11 +52,89 @@ public class MainActivity extends AppCompatActivity {
 
         voiceSelector = findViewById(R.id.voiceSelector);
 
-        // 表示名と識別子の対応表
+        File dir = new File(getExternalFilesDir(null), "voice_presets");
+        if (!dir.exists()) {
+            dir.mkdirs(); // フォルダを作成
+        }
+
+        File target = new File(getExternalFilesDir(null), "voice_presets/presets.json");
+        if (!target.exists()) {
+            InputStream input = getResources().openRawResource(R.raw.presets);
+            FileOutputStream output = null;
+            try {
+                output = new FileOutputStream(target);
+            } catch (FileNotFoundException e) {
+                throw new RuntimeException(e);
+            }
+
+            byte[] buffer = new byte[1024];
+            int length;
+            while (true) {
+                try {
+                    if (!((length = input.read(buffer)) > 0)) break;
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                try {
+                    output.write(buffer, 0, length);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            try {
+                input.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            try {
+                output.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+
+        // 外部ストレージのプリセットフォルダを取得
+        File presetRoot = new File(getExternalFilesDir("voice_presets").getAbsolutePath());
+        if (!presetRoot.exists()) {
+            presetRoot.mkdirs(); // 初回起動時にフォルダ作成
+        }
+
+        ArrayList<String> presetNames = new ArrayList<>();
         Map<String, String> voiceMap = new HashMap<>();
-        voiceMap.put("COEIROINK: つくよみちゃん", "tsukuyomichan");
-        voiceMap.put("VOICEVOX: ずんだもん", "zundamon");
-        voiceMap.put("VOICEVOX: 四国めたん", "shikokumetan");
+
+        File presetJson = new File(getExternalFilesDir(null), "voice_presets/presets.json");
+        if (presetJson.exists()) {
+            try {
+                BufferedReader reader = new BufferedReader(new FileReader(presetJson));
+                StringBuilder builder = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    builder.append(line);
+                }
+                reader.close();
+
+                JSONArray array = new JSONArray(builder.toString());
+                for (int i = 0; i < array.length(); i++) {
+                    JSONObject obj = array.getJSONObject(i);
+                    String displayName = obj.getString("displayName");
+                    String voiceId = obj.getString("voiceId");
+
+                    presetNames.add(displayName);
+                    voiceMap.put(displayName, voiceId);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_item, presetNames);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        voiceSelector.setAdapter(adapter);
+
 
         // SharedPreferencesの準備
         SharedPreferences prefs = getSharedPreferences("settings", MODE_PRIVATE);
@@ -61,10 +150,10 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // Spinnerに表示名を設定
-        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
-                R.array.voice_options, android.R.layout.simple_spinner_item);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        voiceSelector.setAdapter(adapter);
+        ArrayAdapter<String> voiceAdapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_item, presetNames);
+        voiceAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        voiceSelector.setAdapter(voiceAdapter);
 
         // 現在の選択を反映
         int spinnerPosition = adapter.getPosition(currentDisplayName);
@@ -213,6 +302,43 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 // 拒否された場合の処理（例：トースト表示など）
             }
+        }
+    }
+
+    private void copyRawToPresetFolderIfNotExists(int rawResId, String rawFileName) {
+        // 1. 名前抽出（例：yukari_beep → yukari）
+        String presetName = rawFileName.split("_")[0];
+
+        // 2. 保存先フォルダ
+        File targetDir = new File(getExternalFilesDir("voice_presets"), presetName);
+        if (!targetDir.exists()) {
+            targetDir.mkdirs();
+        }
+
+        // 3. 保存先ファイル
+        File targetFile = new File(targetDir, rawFileName);
+
+        // 4. すでに存在するかチェック
+        if (targetFile.exists()) {
+            Toast.makeText(this, "既に存在しています: " + rawFileName, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // 5. コピー処理
+        try (InputStream in = getResources().openRawResource(rawResId);
+             OutputStream out = new FileOutputStream(targetFile)) {
+
+            byte[] buffer = new byte[4096];
+            int len;
+            while ((len = in.read(buffer)) != -1) {
+                out.write(buffer, 0, len);
+            }
+
+            Toast.makeText(this, "コピー完了: " + targetFile.getAbsolutePath(), Toast.LENGTH_SHORT).show();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            Toast.makeText(this, "コピー失敗: " + rawFileName, Toast.LENGTH_SHORT).show();
         }
     }
 }
