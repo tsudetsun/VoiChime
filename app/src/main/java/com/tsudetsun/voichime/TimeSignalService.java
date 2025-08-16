@@ -133,13 +133,7 @@ public class TimeSignalService extends Service {
 
     private void playBeepChime() {
         MediaPlayer beepPlayer = MediaPlayer.create(this, R.raw.time_signal_beep);
-        beepPlayer.setOnCompletionListener(mp -> {
-            mp.release();
-        });
-        beepPlayer.start();
-    }
 
-    public void playChime(String selectedVoice, int hour, int minute) {
         AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 
         int result = audioManager.requestAudioFocus(
@@ -152,6 +146,15 @@ public class TimeSignalService extends Service {
             Log.w(TAG, "Audio focus not granted. Skipping chime.");
             return;
         }
+
+        beepPlayer.setOnCompletionListener(mp -> {
+            mp.release();
+        });
+        beepPlayer.start();
+    }
+
+    public void playChime(String selectedVoice, int hour, int minute) {
+        AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 
         MediaPlayer introPlayer;
         MediaPlayer hourPlayer;
@@ -213,7 +216,6 @@ public class TimeSignalService extends Service {
             return;
         }
 
-        // 🔍 ログ追加で再生順を確認しやすく
         introPlayer.setOnCompletionListener(mp -> {
             Log.d(TAG, "introPlayer 完了 → hourPlayer 再生");
             hourPlayer.start();
