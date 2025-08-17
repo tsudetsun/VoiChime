@@ -18,6 +18,8 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
+
+import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 import android.app.AlertDialog;
 import android.widget.EditText;
@@ -38,6 +40,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class SettingsActivity extends AppCompatActivity {
+    private boolean presetChanged = false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -116,12 +119,14 @@ public class SettingsActivity extends AppCompatActivity {
                                 FileWriter writer = new FileWriter(presetJson);
                                 writer.write(array.toString());
                                 writer.close();
+                                presetChanged = true;
 
                                 Toast.makeText(this, "プリセットを追加しました", Toast.LENGTH_SHORT).show();
                             } catch (Exception e) {
                                 e.printStackTrace();
                                 Toast.makeText(this, "保存に失敗しました", Toast.LENGTH_SHORT).show();
                             }
+                            setupPresetDropdown();
                         } else {
                             Toast.makeText(this, "フォルダ作成に失敗しました", Toast.LENGTH_SHORT).show();
                         }
@@ -155,7 +160,24 @@ public class SettingsActivity extends AppCompatActivity {
         // 戻るボタン
         Button btnBack = findViewById(R.id.btnBack);
         btnBack.setOnClickListener(v -> {
-            finish(); // アクティビティを閉じる
+            if (presetChanged) {
+                Intent resultIntent = new Intent();
+                resultIntent.putExtra("presetChanged", true);
+                setResult(RESULT_OK, resultIntent);
+            }
+            finish();
+        });
+
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (presetChanged) {
+                    Intent resultIntent = new Intent();
+                    resultIntent.putExtra("presetChanged", true);
+                    setResult(RESULT_OK, resultIntent);
+                }
+                finish();
+            }
         });
 
         setupPresetDropdown();

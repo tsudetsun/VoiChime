@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Calendar;
 import android.widget.TextView;
@@ -44,6 +45,7 @@ import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final int REQUEST_CODE_SETTINGS = 1001;
     private Spinner voiceSelector;
     private Switch signalSwitch;
     private static final int REQUEST_NOTIFICATION_PERMISSION = 1001;
@@ -268,7 +270,7 @@ public class MainActivity extends AppCompatActivity {
         Button btnSettings = findViewById(R.id.btnSettings);
         btnSettings.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
-            startActivity(intent);
+            startActivityForResult(intent, REQUEST_CODE_SETTINGS);
         });
 
         timeHandler.post(updateTime);
@@ -295,19 +297,11 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // オプション：ユーザーの応答を処理する
     @Override
     public void onRequestPermissionsResult(int requestCode,
                                            String[] permissions,
                                            int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQUEST_NOTIFICATION_PERMISSION) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // 許可された場合の処理
-            } else {
-                // 拒否された場合の処理（例：トースト表示など）
-            }
-        }
     }
 
     private void copyRawToPresetFolderIfNotExists(int rawResId, String rawFileName) {
@@ -346,4 +340,46 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "コピー失敗: " + rawFileName, Toast.LENGTH_SHORT).show();
         }
     }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_CODE_SETTINGS && resultCode == RESULT_OK) {
+            if (data != null && data.getBooleanExtra("presetChanged", false)) {
+                reloadPresets();
+            }
+        }
+    }
+
+    private void reloadPresets() {
+        try {
+            File presetJson = new File(getExternalFilesDir(null), "voice_presets/presets.json");
+            if (!presetJson.exists()) return;
+
+            BufferedReader reader = new BufferedReader(new FileReader(presetJson));
+            StringBuilder builder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                builder.append(line);
+            }
+            reader.close();
+
+            JSONArray array = new JSONArray(builder.toString());
+            List<String> presetNames = new ArrayList<>();
+            for (int i = 0; i < array.length(); i++) {
+                JSONObject obj = array.getJSONObject(i);
+                presetNames.add(obj.getString("displayName"));
+            }
+
+            // 例：Spinner に反映する場合
+            Spinner spinner = findViewById(R.id.voiceSelector);
+            ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, presetNames);
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            spinner.setAdapter(adapter);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 }
