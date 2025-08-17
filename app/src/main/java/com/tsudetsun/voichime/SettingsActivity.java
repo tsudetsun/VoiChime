@@ -186,6 +186,157 @@ public class SettingsActivity extends AppCompatActivity {
     private JSONArray presetArray;
     private int selectedPresetIndex = -1;
 
+    private void setupPresetDropdown(String selectedVoiceId) {
+        Spinner spinner = findViewById(R.id.spinnerPresets);
+        TextView nameText = findViewById(R.id.textPresetName);
+        SeekBar volumeBar = findViewById(R.id.seekBarVolume);
+        Button renameBtn = findViewById(R.id.btnRenamePreset);
+        Button deleteBtn = findViewById(R.id.btnDeletePreset);
+        LinearLayout controlPanel = findViewById(R.id.presetControlPanel);
+
+        File presetJson = new File(getExternalFilesDir(null), "voice_presets/presets.json");
+        if (!presetJson.exists()) return;
+
+        try {
+            BufferedReader reader = new BufferedReader(new FileReader(presetJson));
+            StringBuilder builder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) builder.append(line);
+            reader.close();
+
+            presetArray = new JSONArray(builder.toString());
+            List<String> displayNames = new ArrayList<>();
+            List<String> voiceIds = new ArrayList<>();
+            for (int i = 0; i < presetArray.length(); i++) {
+                JSONObject preset = presetArray.getJSONObject(i);
+                displayNames.add(presetArray.getJSONObject(i).getString("displayName"));
+                voiceIds.add(preset.getString("voiceId"));
+            }
+
+            ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, displayNames);
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            spinner.setAdapter(adapter);
+
+            int indexToSelect = voiceIds.indexOf(selectedVoiceId);
+            if (indexToSelect >= 0) {
+                spinner.setSelection(indexToSelect);
+                selectedPresetIndex = indexToSelect;
+            } else {
+                selectedPresetIndex = -1;
+            }
+
+            spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                @Override
+                public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                    selectedPresetIndex = position;
+                    JSONObject preset = presetArray.optJSONObject(position);
+                    if (preset != null) {
+                        controlPanel.setVisibility(View.VISIBLE);
+                        nameText.setText("表示名: " + preset.optString("displayName"));
+                        String voiceId = preset.optString("voiceId");
+                        SharedPreferences prefs = getSharedPreferences("settings", MODE_PRIVATE);
+                        int savedVolume = prefs.getInt("volume_" + voiceId, 50); // デフォルト100%
+                        volumeBar.setProgress(savedVolume);
+                    }
+                }
+
+                @Override
+                public void onNothingSelected(AdapterView<?> parent) {
+                    controlPanel.setVisibility(View.GONE);
+                }
+            });
+
+            renameBtn.setOnClickListener(v -> {
+                if (selectedPresetIndex < 0) return;
+                JSONObject preset = presetArray.optJSONObject(selectedPresetIndex);
+                String voiceId = preset.optString("voiceId");
+
+                EditText input = new EditText(this);
+                input.setText(preset.optString("displayName"));
+                new AlertDialog.Builder(this)
+                        .setTitle("表示名を変更")
+                        .setView(input)
+                        .setPositiveButton("変更", (dialog, which) -> {
+                            try {
+                                preset.put("displayName", input.getText().toString());
+                                FileWriter writer = new FileWriter(presetJson);
+                                writer.write(presetArray.toString());
+                                writer.close();
+
+                                setupPresetDropdown(voiceId);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        })
+                        .setNegativeButton("キャンセル", null)
+                        .show();
+            });
+
+            deleteBtn.setOnClickListener(v -> {
+                if (selectedPresetIndex < 0) return;
+                JSONObject preset = presetArray.optJSONObject(selectedPresetIndex);
+                String voiceId = preset.optString("voiceId");
+                new AlertDialog.Builder(this)
+                        .setTitle("削除確認")
+                        .setMessage("プリセット「" + preset.optString("displayName") + "」を削除しますか？")
+                        .setPositiveButton("削除", (dialog, which) -> {
+                            try {
+                                presetArray.remove(selectedPresetIndex);
+                                FileWriter writer = new FileWriter(presetJson);
+                                writer.write(presetArray.toString());
+                                writer.close();
+
+                                File folder = new File(getExternalFilesDir("voice_presets"), voiceId);
+                                deleteRecursive(folder);
+
+                                setupPresetDropdown(); // 再読み込み
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        })
+                        .setNegativeButton("キャンセル", null)
+                        .show();
+            });
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        Button playBtn = findViewById(R.id.btnPlayPreview);
+        SeekBar volumeSeekBar = findViewById(R.id.seekBarVolume); // ← 音量バー
+
+        playBtn.setOnClickListener(v -> {
+            if (selectedPresetIndex < 0) return;
+            JSONObject preset = presetArray.optJSONObject(selectedPresetIndex);
+            String voiceId = preset.optString("voiceId");
+
+            int currentVolume = volumeSeekBar.getProgress(); // 0〜100
+            float volume = currentVolume / 100f; // 0.0〜1.0 に変換
+
+            Intent intent = new Intent(this, TimeSignalService.class);
+            intent.putExtra("selectedVoice", voiceId);
+            intent.putExtra("isPreview", true);
+            intent.putExtra("volume", volume);
+            startService(intent);
+        });
+
+        volumeBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {}
+
+            @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+
+            @Override public void onStopTrackingTouch(SeekBar seekBar) {
+                if (selectedPresetIndex < 0) return;
+                JSONObject preset = presetArray.optJSONObject(selectedPresetIndex);
+                String voiceId = preset.optString("voiceId");
+
+                SharedPreferences prefs = getSharedPreferences("settings", MODE_PRIVATE);
+                prefs.edit().putInt("volume_" + voiceId, seekBar.getProgress()).apply();
+                Toast.makeText(getApplicationContext(), "音量を保存しました", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
     private void setupPresetDropdown() {
         Spinner spinner = findViewById(R.id.spinnerPresets);
         TextView nameText = findViewById(R.id.textPresetName);
@@ -239,6 +390,7 @@ public class SettingsActivity extends AppCompatActivity {
                 if (selectedPresetIndex < 0) return;
                 JSONObject preset = presetArray.optJSONObject(selectedPresetIndex);
                 EditText input = new EditText(this);
+                String voiceId = preset.optString("voiceId");
                 input.setText(preset.optString("displayName"));
                 new AlertDialog.Builder(this)
                         .setTitle("表示名を変更")
@@ -249,7 +401,7 @@ public class SettingsActivity extends AppCompatActivity {
                                 FileWriter writer = new FileWriter(presetJson);
                                 writer.write(presetArray.toString());
                                 writer.close();
-                                setupPresetDropdown(); // 再読み込み
+                                setupPresetDropdown(voiceId);
                             } catch (Exception e) {
                                 e.printStackTrace();
                             }
