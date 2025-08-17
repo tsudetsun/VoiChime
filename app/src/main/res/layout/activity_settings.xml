@@ -86,7 +86,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="プリセット保存場所: /sdcard/Android/data/com.tsudetsun.voichime/files/voice_presets"
+        android:text="プリセット保存場所: Android/data/com.tsudetsun.voichime/files/voice_presets"
         android:autoLink="web"
         android:textColor="@android:color/holo_blue_dark"
         android:textSize="16sp"
