@@ -26,13 +26,62 @@
         android:minHeight="48dp"
         android:text="時報前のビープ音を鳴らす" />
 
-    <!-- プリセット追加ボタン -->
     <Button
         android:id="@+id/btnAddPreset"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="プリセットを追加する"
         android:layout_marginTop="16dp" />
+
+    <Spinner
+        android:id="@+id/spinnerPresets"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp" />
+
+    <LinearLayout
+        android:id="@+id/presetControlPanel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/textPresetName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="表示名: "
+            android:textSize="18sp"
+            android:layout_marginBottom="8dp" />
+
+        <SeekBar
+            android:id="@+id/seekBarVolume"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="100"
+            android:layout_marginBottom="8dp" />
+
+        <Button
+            android:id="@+id/btnPlayPreview"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="音声を再生"
+            android:layout_marginTop="8dp" />
+
+        <Button
+            android:id="@+id/btnRenamePreset"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="名前変更" />
+
+        <Button
+            android:id="@+id/btnDeletePreset"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="削除"
+            android:layout_marginTop="8dp" />
+    </LinearLayout>
+
 
     <TextView
         android:layout_width="wrap_content"

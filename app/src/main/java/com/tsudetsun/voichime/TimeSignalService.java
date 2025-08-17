@@ -32,6 +32,20 @@ public class TimeSignalService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         createNotificationChannel();
+        AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+
+        if (intent != null && intent.getBooleanExtra("isPreview", false)) {
+            int result = audioManager.requestAudioFocus(
+                    focusChangeListener,
+                    AudioManager.STREAM_MUSIC,
+                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
+            );
+
+            String voiceId = intent.getStringExtra("selectedVoice");
+            float volume = intent.getFloatExtra("volume", 1.0f); // デフォルト最大音量
+            playChime(voiceId, 0, 0, volume);
+            return START_NOT_STICKY;
+        }
 
         Intent stopIntent = new Intent(this, StopServiceReceiver.class);
         int pendingFlags = PendingIntent.FLAG_UPDATE_CURRENT;
@@ -63,6 +77,7 @@ public class TimeSignalService extends Service {
             timeUpdater = new Runnable() {
                 @Override
                 public void run() {
+                    float volume = prefs.getInt("volume", 100) / 100f;
                     Calendar calendar = Calendar.getInstance();
                     int hour = calendar.get(Calendar.HOUR_OF_DAY);
                     int minute = calendar.get(Calendar.MINUTE);
@@ -75,11 +90,11 @@ public class TimeSignalService extends Service {
                     String selectedVoice = prefs.getString("voiceType", "tsukuyomichan");
 
                     if (isBeepEnabled && (minute % intervalMinutes == 0) && second == 1 && !hasPlayed) {
-                        playChime(selectedVoice, hour, minute);
+                        playChime(selectedVoice, hour, minute, volume); // ← volume を追加
                     }
 
                     if (!isBeepEnabled && (minute % intervalMinutes == 0) && second == 0 && !hasPlayed) {
-                        playChime(selectedVoice, hour, minute);
+                        playChime(selectedVoice, hour, minute, volume); // ← volume を追加
                     }
 
                     if (minute != 0 && minute != 30) {
@@ -153,7 +168,7 @@ public class TimeSignalService extends Service {
         beepPlayer.start();
     }
 
-    public void playChime(String selectedVoice, int hour, int minute) {
+    public void playChime(String selectedVoice, int hour, int minute, float volume) {
         AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 
         MediaPlayer introPlayer;
@@ -200,12 +215,16 @@ public class TimeSignalService extends Service {
                     return;
                 }
 
-                // 🔧 修正ポイント：rawリソースは MediaPlayer.create() を使う
                 introPlayer = MediaPlayer.create(this, introResId);
                 hourPlayer = MediaPlayer.create(this, hourResId);
                 minutePlayer = MediaPlayer.create(this, minuteResId);
                 outroPlayer = MediaPlayer.create(this, outroResId);
             }
+
+            introPlayer.setVolume(volume, volume);
+            hourPlayer.setVolume(volume, volume);
+            minutePlayer.setVolume(volume, volume);
+            outroPlayer.setVolume(volume, volume);
         } catch (Exception e) {
             Log.e(TAG, "音声ファイルの読み込みに失敗", e);
             return;
