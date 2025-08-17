@@ -200,7 +200,10 @@ public class SettingsActivity extends AppCompatActivity {
                     if (preset != null) {
                         controlPanel.setVisibility(View.VISIBLE);
                         nameText.setText("表示名: " + preset.optString("displayName"));
-                        volumeBar.setProgress(50); // TODO: 保存値を読み込む
+                        String voiceId = preset.optString("voiceId");
+                        SharedPreferences prefs = getSharedPreferences("settings", MODE_PRIVATE);
+                        int savedVolume = prefs.getInt("volume_" + voiceId, 50); // デフォルト100%
+                        volumeBar.setProgress(savedVolume);
                     }
                 }
 
@@ -277,10 +280,25 @@ public class SettingsActivity extends AppCompatActivity {
             Intent intent = new Intent(this, TimeSignalService.class);
             intent.putExtra("selectedVoice", voiceId);
             intent.putExtra("isPreview", true);
-            intent.putExtra("volume", volume); // ← ここで渡す！
+            intent.putExtra("volume", volume);
             startService(intent);
         });
 
+        volumeBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {}
+
+            @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+
+            @Override public void onStopTrackingTouch(SeekBar seekBar) {
+                if (selectedPresetIndex < 0) return;
+                JSONObject preset = presetArray.optJSONObject(selectedPresetIndex);
+                String voiceId = preset.optString("voiceId");
+
+                SharedPreferences prefs = getSharedPreferences("settings", MODE_PRIVATE);
+                prefs.edit().putInt("volume_" + voiceId, seekBar.getProgress()).apply();
+                Toast.makeText(getApplicationContext(), "音量を保存しました", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void deleteRecursive(File fileOrDirectory) {
@@ -290,30 +308,5 @@ public class SettingsActivity extends AppCompatActivity {
             }
         }
         fileOrDirectory.delete();
-    }
-
-    private void showDeleteDialog(String displayName, String voiceId, int index, JSONArray array) {
-        new AlertDialog.Builder(this)
-                .setTitle("プリセットの削除")
-                .setMessage("「" + displayName + "」をほんとうに削除しますか？\nこの操作は元に戻せません。")
-                .setPositiveButton("削除する", (dialog, which) -> {
-                    try {
-                        array.remove(index);
-                        FileWriter writer = new FileWriter(new File(getExternalFilesDir(null), "voice_presets/presets.json"));
-                        writer.write(array.toString());
-                        writer.close();
-
-                        File folder = new File(getExternalFilesDir("voice_presets"), voiceId);
-                        deleteRecursive(folder);
-
-                        setupPresetDropdown(); // 再読み込み
-                        Toast.makeText(this, "プリセットを削除しました", Toast.LENGTH_SHORT).show();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        Toast.makeText(this, "削除に失敗しました", Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNegativeButton("キャンセル", null)
-                .show();
     }
 }
