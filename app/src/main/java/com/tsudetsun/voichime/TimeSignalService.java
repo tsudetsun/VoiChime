@@ -105,7 +105,7 @@ public class TimeSignalService extends Service {
                         hasPlayedBeep = false;
                     }
 
-                    if ((minute % intervalMinutes == 0) && second == 10 && !hasPlayed){
+                    if ((minute % intervalMinutes == 0) && second == 10){
                         audioManager.abandonAudioFocus(focusChangeListener);
                     }
 
