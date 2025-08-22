@@ -6,6 +6,7 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -17,6 +18,8 @@ import android.widget.Spinner;
 import androidx.appcompat.app.AppCompatActivity;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -24,6 +27,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -70,42 +74,33 @@ public class MainActivity extends AppCompatActivity {
         }
 
         File target = new File(getExternalFilesDir(null), "voice_presets/presets.json");
-        if (!target.exists()) {
-            InputStream input = getResources().openRawResource(R.raw.presets);
-            FileOutputStream output = null;
-            try {
-                output = new FileOutputStream(target);
-            } catch (FileNotFoundException e) {
-                throw new RuntimeException(e);
+        InputStream input = getResources().openRawResource(R.raw.presets);
+
+        try {
+            byte[] rawBytes = readAllBytes(input);
+
+            boolean shouldUpdate = true;
+            if (target.exists()) {
+                FileInputStream existingInput = new FileInputStream(target);
+                byte[] existingBytes = readAllBytes(existingInput);
+                existingInput.close();
+
+                shouldUpdate = !Arrays.equals(rawBytes, existingBytes); // 内容が違えば更新
             }
 
-            byte[] buffer = new byte[1024];
-            int length;
-            while (true) {
-                try {
-                    if (!((length = input.read(buffer)) > 0)) break;
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-                try {
-                    output.write(buffer, 0, length);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-
-            try {
-                input.close();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            try {
+            if (shouldUpdate) {
+                FileOutputStream output = new FileOutputStream(target);
+                output.write(rawBytes);
                 output.close();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+                Log.d("PresetUpdate", "presets.json を更新しました");
+            } else {
+                Log.d("PresetUpdate", "presets.json は変更なし");
             }
-        }
 
+            input.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         // 外部ストレージのプリセットフォルダを取得
         File presetRoot = new File(getExternalFilesDir("voice_presets").getAbsolutePath());
@@ -140,7 +135,6 @@ public class MainActivity extends AppCompatActivity {
                 e.printStackTrace();
             }
         }
-
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_item, presetNames);
@@ -445,4 +439,13 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private byte[] readAllBytes(InputStream input) throws IOException {
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        byte[] data = new byte[1024];
+        int nRead;
+        while ((nRead = input.read(data, 0, data.length)) != -1) {
+            buffer.write(data, 0, nRead);
+        }
+        return buffer.toByteArray();
+    }
 }
