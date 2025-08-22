@@ -27,6 +27,9 @@ public class TimeSignalService extends Service {
     private boolean hasPlayedBeep = false;
     private static final String TAG = "ChimeService";
     private final AudioManager.OnAudioFocusChangeListener focusChangeListener = focusChange -> {};
+    private RandomVoicePreset randomVoicePreset;
+    private static final String CHANNEL_ID = "timesignal_channel";
+    private static final int NOTIFICATION_ID = 1;
 
 
     @Override
@@ -42,6 +45,14 @@ public class TimeSignalService extends Service {
             );
 
             String voiceId = intent.getStringExtra("selectedVoice");
+
+            if ("random".equals(voiceId)) {
+                if (randomVoicePreset == null) {
+                    randomVoicePreset = new RandomVoicePreset(this);
+                }
+                voiceId = randomVoicePreset.getRandomVoiceId();
+            }
+
             float volume = intent.getFloatExtra("volume", 1.0f); // デフォルト最大音量
             playChime(voiceId, 0, 0, volume);
             return START_NOT_STICKY;
@@ -70,14 +81,14 @@ public class TimeSignalService extends Service {
 
                     int intervalMinutes = prefs.getInt("intervalMinutes", 30); // デフォルト30分
 
-                    String selectedVoice = prefs.getString("voiceType", "tsukuyomichan");
+                    String selectedVoice = getVoiceType();
 
                     if (isBeepEnabled && (minute % intervalMinutes == 0) && second == 1 && !hasPlayed) {
-                        playChime(selectedVoice, hour, minute, volume); // ← volume を追加
+                        playChime(selectedVoice, hour, minute, volume);
                     }
 
                     if (!isBeepEnabled && (minute % intervalMinutes == 0) && second == 0 && !hasPlayed) {
-                        playChime(selectedVoice, hour, minute, volume); // ← volume を追加
+                        playChime(selectedVoice, hour, minute, volume);
                     }
 
                     if (minute != 0 && minute != 30) {
@@ -115,8 +126,31 @@ public class TimeSignalService extends Service {
         return null;
     }
 
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    CHANNEL_ID,
+                    "時報通知",
+                    NotificationManager.IMPORTANCE_LOW // LOW に変更
+            );
+            channel.setDescription("時報アプリがバックグラウンドで動作中です");
+            channel.setSound(null, null); // 通知音を無効化
+            channel.enableVibration(false); // バイブレーションを無効化
+
+            NotificationManager manager = getSystemService(NotificationManager.class);
+            if (manager != null) {
+                manager.createNotificationChannel(channel);
+            }
+        }
+    }
+
     private void showForegroundNotification() {
+        // 通知チャンネルを作成
+        createNotificationChannel();
+
+        // メインアクティビティを開くIntent
         Intent notificationIntent = new Intent(this, MainActivity.class);
+        notificationIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
 
         PendingIntent pendingIntent = PendingIntent.getActivity(
                 this,
@@ -125,17 +159,22 @@ public class TimeSignalService extends Service {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE
         );
 
-        Notification notification = new NotificationCompat.Builder(this, "timesignal_channel")
+        // 通知を構築
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("VoiChime")
-                .setContentText("時報動作中")
+                .setContentText("タップしてアプリを開く")
                 .setSmallIcon(R.mipmap.ic_launcher)
                 .setContentIntent(pendingIntent)
-                .setAutoCancel(false)
-                .setOngoing(false)
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                .build();
+                .setOngoing(false)  // タップ可能にする
+                .setAutoCancel(false) // サービス継続のため自動削除しない
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setCategory(NotificationCompat.CATEGORY_SERVICE)
+                .setSound(null) // 通知音を無効化
+                .setVibrate(null); // バイブレーションを無効化
 
-        startForeground(1, notification);
+        // フォアグラウンドサービスとして通知を表示
+        startForeground(NOTIFICATION_ID, builder.build());
     }
 
     private void playBeepChime() {
@@ -259,5 +298,23 @@ public class TimeSignalService extends Service {
         }
 
         hasPlayed = true;
+    }
+
+    private String getVoiceType() {
+        // 初回呼び出し時にRandomVoicePresetを初期化
+        if (randomVoicePreset == null) {
+            randomVoicePreset = new RandomVoicePreset(this);
+        }
+
+        SharedPreferences prefs = getSharedPreferences("settings", MODE_PRIVATE);
+        String selectedVoiceId = prefs.getString("voiceType", "tsukuyomichan");
+
+        if ("random".equals(selectedVoiceId)) {
+            // ランダムが選択されている場合
+            return randomVoicePreset.getRandomVoiceId();
+        } else {
+            // 固定プリセットが選択されている場合
+            return selectedVoiceId;
+        }
     }
 }

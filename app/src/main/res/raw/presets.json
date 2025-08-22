@@ -1,3 +1,4 @@
+
 [
   {
     "displayName": "COEIROINK: つくよみちゃん",
@@ -10,5 +11,9 @@
   {
     "displayName": "VOICEVOX: 四国めたん",
     "voiceId": "shikokumetan"
+  },
+  {
+    "displayName": "ランダム",
+    "voiceId": "random"
   }
 ]
