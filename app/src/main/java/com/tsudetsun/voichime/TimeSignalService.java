@@ -164,8 +164,8 @@ public class TimeSignalService extends Service {
         // 通知を構築
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("VoiChime")
-                .setContentText("タップしてアプリを開く")
-                .setSmallIcon(R.mipmap.ic_launcher)
+                .setContentText("時報作動中")
+                .setSmallIcon(R.drawable.ic_notification)
                 .setContentIntent(pendingIntent)
                 .setOngoing(false)  // タップ可能にする
                 .setAutoCancel(false) // サービス継続のため自動削除しない
