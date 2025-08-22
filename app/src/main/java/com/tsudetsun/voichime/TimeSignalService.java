@@ -38,11 +38,7 @@ public class TimeSignalService extends Service {
         AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 
         if (intent != null && intent.getBooleanExtra("isPreview", false)) {
-            int result = audioManager.requestAudioFocus(
-                    focusChangeListener,
-                    AudioManager.STREAM_MUSIC,
-                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
-            );
+            startAudioFocus();
 
             String voiceId = intent.getStringExtra("selectedVoice");
 
@@ -62,10 +58,10 @@ public class TimeSignalService extends Service {
         SharedPreferences prefs = getSharedPreferences("settings", MODE_PRIVATE);
         boolean isSignalEnabled = prefs.getBoolean("signalEnabled", true);
         if (!isSignalEnabled) {
+            audioManager.abandonAudioFocus(focusChangeListener);
             stopSelf(); // サービスを即終了
             return START_NOT_STICKY;
         }
-
 
         if (timeUpdater == null) {
             timeUpdater = new Runnable() {
@@ -76,7 +72,6 @@ public class TimeSignalService extends Service {
                     int hour = calendar.get(Calendar.HOUR_OF_DAY);
                     int minute = calendar.get(Calendar.MINUTE);
                     int second = calendar.get(Calendar.SECOND);
-                    long lastChimeTime = 0;
 
                     boolean isBeepEnabled = prefs.getBoolean("beepEnabled", true);
 
@@ -89,6 +84,7 @@ public class TimeSignalService extends Service {
                     }
 
                     if (!isBeepEnabled && (minute % intervalMinutes == 0) && second == 0 && !hasPlayed) {
+                        startAudioFocus();
                         playChime(selectedVoice, hour, minute, volume);
                     }
 
@@ -97,6 +93,7 @@ public class TimeSignalService extends Service {
                     }
 
                     if (isBeepEnabled && ((minute + 1) % intervalMinutes == 0) && second == 56 && !hasPlayedBeep) {
+                        startAudioFocus();
                         playBeepChime();
                         hasPlayedBeep = true;
                     }
@@ -187,16 +184,7 @@ public class TimeSignalService extends Service {
 
         AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 
-        int result = audioManager.requestAudioFocus(
-                focusChangeListener,
-                AudioManager.STREAM_MUSIC,
-                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
-        );
 
-        if (result != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
-            Log.w(TAG, "Audio focus not granted. Skipping chime.");
-            return;
-        }
 
         beepPlayer.setOnCompletionListener(mp -> {
             mp.release();
@@ -320,6 +308,21 @@ public class TimeSignalService extends Service {
         } else {
             // 固定プリセットが選択されている場合
             return selectedVoiceId;
+        }
+    }
+
+    private void startAudioFocus() {
+        AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+
+        int result = audioManager.requestAudioFocus(
+                focusChangeListener,
+                AudioManager.STREAM_MUSIC,
+                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
+        );
+
+        if (result != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+            Log.w(TAG, "Audio focus not granted. Skipping chime.");
+            return;
         }
     }
 }
