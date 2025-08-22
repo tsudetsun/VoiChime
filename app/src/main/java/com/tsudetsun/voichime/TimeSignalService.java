@@ -76,6 +76,7 @@ public class TimeSignalService extends Service {
                     int hour = calendar.get(Calendar.HOUR_OF_DAY);
                     int minute = calendar.get(Calendar.MINUTE);
                     int second = calendar.get(Calendar.SECOND);
+                    long lastChimeTime = 0;
 
                     boolean isBeepEnabled = prefs.getBoolean("beepEnabled", true);
 
@@ -102,6 +103,10 @@ public class TimeSignalService extends Service {
 
                     if (second == 0) {
                         hasPlayedBeep = false;
+                    }
+
+                    if ((minute % intervalMinutes == 0) && second == 10 && !hasPlayed){
+                        audioManager.abandonAudioFocus(focusChangeListener);
                     }
 
                     handler.postDelayed(this, 1000);
