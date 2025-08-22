@@ -74,32 +74,40 @@ public class MainActivity extends AppCompatActivity {
         }
 
         File target = new File(getExternalFilesDir(null), "voice_presets/presets.json");
-        InputStream input = getResources().openRawResource(R.raw.presets);
-
-        try {
-            byte[] rawBytes = readAllBytes(input);
-
-            boolean shouldUpdate = true;
-            if (target.exists()) {
-                FileInputStream existingInput = new FileInputStream(target);
-                byte[] existingBytes = readAllBytes(existingInput);
-                existingInput.close();
-
-                shouldUpdate = !Arrays.equals(rawBytes, existingBytes); // 内容が違えば更新
+        if (!target.exists()) {
+            InputStream input = getResources().openRawResource(R.raw.presets);
+            FileOutputStream output = null;
+            try {
+                output = new FileOutputStream(target);
+            } catch (FileNotFoundException e) {
+                throw new RuntimeException(e);
             }
 
-            if (shouldUpdate) {
-                FileOutputStream output = new FileOutputStream(target);
-                output.write(rawBytes);
+            byte[] buffer = new byte[1024];
+            int length;
+            while (true) {
+                try {
+                    if (!((length = input.read(buffer)) > 0)) break;
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                try {
+                    output.write(buffer, 0, length);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            try {
+                input.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            try {
                 output.close();
-                Log.d("PresetUpdate", "presets.json を更新しました");
-            } else {
-                Log.d("PresetUpdate", "presets.json は変更なし");
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
-
-            input.close();
-        } catch (IOException e) {
-            e.printStackTrace();
         }
 
         // 外部ストレージのプリセットフォルダを取得
@@ -332,43 +340,6 @@ public class MainActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 
-    private void copyRawToPresetFolderIfNotExists(int rawResId, String rawFileName) {
-        // 1. 名前抽出（例：yukari_beep → yukari）
-        String presetName = rawFileName.split("_")[0];
-
-        // 2. 保存先フォルダ
-        File targetDir = new File(getExternalFilesDir("voice_presets"), presetName);
-        if (!targetDir.exists()) {
-            targetDir.mkdirs();
-        }
-
-        // 3. 保存先ファイル
-        File targetFile = new File(targetDir, rawFileName);
-
-        // 4. すでに存在するかチェック
-        if (targetFile.exists()) {
-            Toast.makeText(this, "既に存在しています: " + rawFileName, Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        // 5. コピー処理
-        try (InputStream in = getResources().openRawResource(rawResId);
-             OutputStream out = new FileOutputStream(targetFile)) {
-
-            byte[] buffer = new byte[4096];
-            int len;
-            while ((len = in.read(buffer)) != -1) {
-                out.write(buffer, 0, len);
-            }
-
-            Toast.makeText(this, "コピー完了: " + targetFile.getAbsolutePath(), Toast.LENGTH_SHORT).show();
-
-        } catch (IOException e) {
-            e.printStackTrace();
-            Toast.makeText(this, "コピー失敗: " + rawFileName, Toast.LENGTH_SHORT).show();
-        }
-    }
-
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -437,15 +408,5 @@ public class MainActivity extends AppCompatActivity {
         if (timeHandler != null && updateTime != null) {
             timeHandler.removeCallbacks(updateTime);
         }
-    }
-
-    private byte[] readAllBytes(InputStream input) throws IOException {
-        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        byte[] data = new byte[1024];
-        int nRead;
-        while ((nRead = input.read(data, 0, data.length)) != -1) {
-            buffer.write(data, 0, nRead);
-        }
-        return buffer.toByteArray();
     }
 }
