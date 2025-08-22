@@ -229,10 +229,8 @@ public class MainActivity extends AppCompatActivity {
                             flashTimeColor(500, Color.RED);
                         }
                     }
-                    if (minute % intervalMinutes == 0) {
-                        if (second == 0) { // 時報が鳴る時（1秒間）
-                            flashTimeColor(1000, Color.RED);
-                        }
+                    if (minute % intervalMinutes == 0 && second == 0) {
+                        flashTimeColor(1000, Color.RED);
                     }
                 }
 
@@ -387,7 +385,7 @@ public class MainActivity extends AppCompatActivity {
 
         long currentTime = System.currentTimeMillis();
         // 0.9秒以内の重複実行を防ぐ
-        if (currentTime - lastFlashTime < 900) {
+        if (currentTime - lastFlashTime < 990) {
             return;
         }
         lastFlashTime = currentTime;
