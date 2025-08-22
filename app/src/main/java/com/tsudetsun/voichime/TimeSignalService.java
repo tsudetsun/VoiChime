@@ -31,7 +31,7 @@ public class TimeSignalService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        createNotificationChannel();
+        showForegroundNotification();
         AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 
         if (intent != null && intent.getBooleanExtra("isPreview", false)) {
@@ -47,23 +47,6 @@ public class TimeSignalService extends Service {
             return START_NOT_STICKY;
         }
 
-        Intent stopIntent = new Intent(this, StopServiceReceiver.class);
-        int pendingFlags = PendingIntent.FLAG_UPDATE_CURRENT;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            pendingFlags |= PendingIntent.FLAG_IMMUTABLE;
-        }
-        PendingIntent stopPendingIntent = PendingIntent.getBroadcast(this, 0, stopIntent, pendingFlags);
-
-        Notification notification = new NotificationCompat.Builder(this, "timesignal_channel")
-                .setContentTitle("時報アプリ起動中")
-                .setContentText("バックグラウンドで時刻を監視しています")
-                .setSmallIcon(R.mipmap.ic_launcher)
-                .setPriority(NotificationCompat.PRIORITY_LOW)
-                .setOngoing(true)
-                .addAction(R.drawable.ic_stop, "停止", stopPendingIntent) // ← アクション追加
-                .build();
-
-        startForeground(1, notification);
 
         SharedPreferences prefs = getSharedPreferences("settings", MODE_PRIVATE);
         boolean isSignalEnabled = prefs.getBoolean("signalEnabled", true);
@@ -132,18 +115,27 @@ public class TimeSignalService extends Service {
         return null;
     }
 
-    private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                    "timesignal_channel",
-                    "時報通知",
-                    NotificationManager.IMPORTANCE_DEFAULT
-            );
-            channel.setDescription("時報アプリがバックグラウンドで動作中です");
+    private void showForegroundNotification() {
+        Intent notificationIntent = new Intent(this, MainActivity.class);
 
-            NotificationManager manager = getSystemService(NotificationManager.class);
-            manager.createNotificationChannel(channel);
-        }
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+                this,
+                0,
+                notificationIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE
+        );
+
+        Notification notification = new NotificationCompat.Builder(this, "timesignal_channel")
+                .setContentTitle("VoiChime")
+                .setContentText("時報動作中")
+                .setSmallIcon(R.mipmap.ic_launcher)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(false)
+                .setOngoing(false)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .build();
+
+        startForeground(1, notification);
     }
 
     private void playBeepChime() {
