@@ -89,44 +89,26 @@ public class SettingsActivity extends AppCompatActivity {
                         // フォルダ作成
                         File presetFolder = new File(getExternalFilesDir("voice_presets").getAbsolutePath(), voiceId);
                         if (presetFolder.exists()) {
-                            Toast.makeText(this, "同じ識別子のプリセットがすでに存在します", Toast.LENGTH_SHORT).show();
-                            return;
+                            new AlertDialog.Builder(SettingsActivity.this)
+                                    .setTitle("プリセットの上書き")
+                                    .setMessage("同じ識別子のプリセットがすでに存在します。上書きしますか？")
+                                    .setPositiveButton("上書きする", (dialog1, which1) -> {
+                                        savePreset(displayName, voiceId, presetFolder);
+                                    })
+                                    .setNegativeButton("キャンセル", null)
+                                    .show();
+                        } else {
+                            boolean created = presetFolder.mkdirs();
+                            if (created) {
+                                savePreset(displayName, voiceId, presetFolder);
+                            } else {
+                                Toast.makeText(this, "フォルダ作成に失敗しました", Toast.LENGTH_SHORT).show();
+                            }
                         }
 
                         boolean created = presetFolder.mkdirs();
                         if (created) {
-                            // JSONに追加
-                            try {
-                                File presetJson = new File(getExternalFilesDir(null), "voice_presets/presets.json");
-                                JSONArray array = new JSONArray();
-
-                                if (presetJson.exists()) {
-                                    BufferedReader reader = new BufferedReader(new FileReader(presetJson));
-                                    StringBuilder builder = new StringBuilder();
-                                    String line;
-                                    while ((line = reader.readLine()) != null) {
-                                        builder.append(line);
-                                    }
-                                    reader.close();
-                                    array = new JSONArray(builder.toString());
-                                }
-
-                                JSONObject newPreset = new JSONObject();
-                                newPreset.put("displayName", displayName);
-                                newPreset.put("voiceId", voiceId);
-                                array.put(newPreset);
-
-                                FileWriter writer = new FileWriter(presetJson);
-                                writer.write(array.toString());
-                                writer.close();
-                                presetChanged = true;
-
-                                Toast.makeText(this, "プリセットを追加しました", Toast.LENGTH_SHORT).show();
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                                Toast.makeText(this, "保存に失敗しました", Toast.LENGTH_SHORT).show();
-                            }
-                            setupPresetDropdown();
+                            savePreset(displayName, voiceId, presetFolder);
                         } else {
                             Toast.makeText(this, "フォルダ作成に失敗しました", Toast.LENGTH_SHORT).show();
                         }
@@ -482,5 +464,55 @@ public class SettingsActivity extends AppCompatActivity {
             }
         }
         fileOrDirectory.delete();
+    }
+
+    private void savePreset(String displayName, String voiceId, File presetFolder) {
+        try {
+            // JSONファイルの読み込み
+            File presetJson = new File(getExternalFilesDir(null), "voice_presets/presets.json");
+            JSONArray array = new JSONArray();
+
+            if (presetJson.exists()) {
+                BufferedReader reader = new BufferedReader(new FileReader(presetJson));
+                StringBuilder builder = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    builder.append(line);
+                }
+                reader.close();
+                array = new JSONArray(builder.toString());
+            }
+
+            // 既存の voiceId を探して上書き
+            int existingIndex = -1;
+            for (int i = 0; i < array.length(); i++) {
+                JSONObject preset = array.getJSONObject(i);
+                if (preset.getString("voiceId").equals(voiceId)) {
+                    existingIndex = i;
+                    break;
+                }
+            }
+
+            JSONObject newPreset = new JSONObject();
+            newPreset.put("displayName", displayName);
+            newPreset.put("voiceId", voiceId);
+
+            if (existingIndex >= 0) {
+                array.put(existingIndex, newPreset); // 上書き
+            } else {
+                array.put(newPreset); // 新規追加
+            }
+
+            FileWriter writer = new FileWriter(presetJson);
+            writer.write(array.toString());
+            writer.close();
+            presetChanged = true;
+
+            Toast.makeText(this, "プリセットを保存しました", Toast.LENGTH_SHORT).show();
+            setupPresetDropdown();
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, "保存に失敗しました", Toast.LENGTH_SHORT).show();
+        }
     }
 }
