@@ -3,6 +3,7 @@ package com.tsudetsun.voichime;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
@@ -49,6 +50,10 @@ public class MainActivity extends AppCompatActivity {
     private Spinner voiceSelector;
     private Switch signalSwitch;
     private static final int REQUEST_NOTIFICATION_PERMISSION = 1001;
+    private Handler timeHandler;
+    private int originalTextColor;
+    private Runnable updateTime;
+    private long lastFlashTime = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -188,9 +193,12 @@ public class MainActivity extends AppCompatActivity {
         }
 
         TextView timeText = findViewById(R.id.timeText);
-        Handler timeHandler = new Handler();
+        timeHandler = new Handler();
 
-        Runnable updateTime = new Runnable() {
+        // 元の色を保存
+        originalTextColor = timeText.getCurrentTextColor();
+
+        updateTime = new Runnable() {
             @Override
             public void run() {
                 Calendar calendar = Calendar.getInstance();
@@ -201,10 +209,36 @@ public class MainActivity extends AppCompatActivity {
                 String timeString = String.format("%02d:%02d:%02d", hour, minute, second);
                 timeText.setText(timeString);
 
-                timeHandler.postDelayed(this, 1000); // 1秒ごとに更新
+                // 時報のタイミングをチェック
+                SharedPreferences prefs = getSharedPreferences("settings", MODE_PRIVATE);
+                boolean isSignalEnabled = prefs.getBoolean("signalEnabled", true);
+                int intervalMinutes = prefs.getInt("intervalMinutes", 30);
+
+                if (isSignalEnabled) {
+                    // 時報が鳴るタイミング（intervalMinutesごと）をチェック
+
+                    if ((minute + 1) % intervalMinutes == 0) {
+                        // 0秒に時報が鳴る場合の色変更
+                        if (second == 57) { // 3秒前
+                            flashTimeColor(500, Color.RED);
+                        } else if (second == 58) { // 2秒前
+                            flashTimeColor(500, Color.RED);
+                        } else if (second == 59) { // 1秒前
+                            flashTimeColor(500, Color.RED);
+                        }
+                    }
+                    if (minute % intervalMinutes == 0) {
+                        if (second == 0) { // 時報が鳴る時（1秒間）
+                            flashTimeColor(1000, Color.RED);
+                        }
+                    }
+                }
+
+                timeHandler.postDelayed(this, 100); // 100ms（0.1秒）ごとに更新
             }
         };
 
+        timeHandler.post(updateTime);
         signalSwitch = findViewById(R.id.signalSwitch);
         boolean isSignalEnabled = prefs.getBoolean("signalEnabled", true);
         signalSwitch.setChecked(isSignalEnabled);
@@ -379,6 +413,35 @@ public class MainActivity extends AppCompatActivity {
 
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    // 色を変更するメソッド
+    private void flashTimeColor(int duration, int color) {
+        TextView timeText = findViewById(R.id.timeText);
+
+        long currentTime = System.currentTimeMillis();
+        // 0.9秒以内の重複実行を防ぐ
+        if (currentTime - lastFlashTime < 900) {
+            return;
+        }
+        lastFlashTime = currentTime;
+
+        // 指定色に変更
+        timeText.setTextColor(color);
+
+        // 指定時間後に元の色に戻す
+        timeHandler.postDelayed(() -> {
+            timeText.setTextColor(originalTextColor);
+        }, duration);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // ハンドラーのコールバックをクリア
+        if (timeHandler != null && updateTime != null) {
+            timeHandler.removeCallbacks(updateTime);
         }
     }
 
