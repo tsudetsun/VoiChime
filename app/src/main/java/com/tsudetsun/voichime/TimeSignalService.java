@@ -162,6 +162,14 @@ public class TimeSignalService extends Service {
         );
 
         // 通知を構築
+        Intent stopIntent = new Intent(this, StopServiceReceiver.class);
+        int pendingFlags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            pendingFlags |= PendingIntent.FLAG_IMMUTABLE;
+        }
+
+        PendingIntent stopPendingIntent = PendingIntent.getBroadcast(this, 0, stopIntent, pendingFlags);
+
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("VoiChime")
                 .setContentText("時報作動中")
@@ -173,7 +181,8 @@ public class TimeSignalService extends Service {
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setCategory(NotificationCompat.CATEGORY_SERVICE)
                 .setSound(null) // 通知音を無効化
-                .setVibrate(null); // バイブレーションを無効化
+                .setVibrate(null) // バイブレーションを無効化
+                .addAction(R.drawable.ic_stop, "停止", stopPendingIntent);
 
         // フォアグラウンドサービスとして通知を表示
         startForeground(NOTIFICATION_ID, builder.build());
